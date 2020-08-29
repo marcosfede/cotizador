@@ -1,9 +1,8 @@
-from clients import CMKTClient, SatoshiClient
-
+from clients import CMKTClient, SatoshiClient, PaxfulClient
 
 class Route:
-    def __init__(self):
-        self.path = []
+    def __init__(self, steps=[]):
+        self.path = steps[:]
 
     def add_step(self, node):
         self.path.append(node)
@@ -18,13 +17,17 @@ class Route:
             prev = node.calc_out(prev)
         return prev
 
+    def calc_rate(self, inpt):
+        out = self.calc_out(inpt)
+        rate = out/inpt
+        return rate
+
     def analyze(self):
         print(self)
         inputs = [100]
         for i in inputs:
-            res = self.calc_out(i)
-            rate = res/i
-            print(f'para {i} usd queda a un rate de {rate}, total {res}')
+            rate = self.calc_rate(i)
+            print(f'para {i} usd queda a un rate de {rate}')
         print()
 
 class Node:
@@ -60,17 +63,29 @@ class Satoshi(Node):
         coti = 1427824.91
         return inpt*coti*(1-0.01)
 
+class Paxful(Node):
+    def __init__(self):
+        super().__init__('Paxful')
+        self.client = PaxfulClient()
+
+    def calc_out(self, inpt):
+        cotizacion_btc = self.client.get_price()
+        return inpt / cotizacion_btc
+
 
 banxa = Banxa()
 mkt = CryptoMkt()
 satoshi = Satoshi()
+paxful = Paxful()
 
-# r1 = Route()
-# r1.add_step(banxa)
-# r1.add_step(satoshi)
-# r1.analyze()
+routes = [
+    Route([banxa, mkt]),
+    Route([banxa, satoshi]),
+    # Route([crypto, mkt]),
+    # Route([crypto, satoshi]),
+    Route([paxful, mkt]),
+    Route([paxful, satoshi]),
+]
 
-r2 = Route()
-r2.add_step(banxa)
-r2.add_step(mkt)
-r2.analyze()
+for route in routes:
+    route.analyze()
